@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Worktree runs (created by orchestrator at runtime)
+.worktrees/
+.runs/
+
+# Workspace context (private, gitignored already at parent level)
+.context/
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log
