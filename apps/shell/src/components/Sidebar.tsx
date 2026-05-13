@@ -4,12 +4,6 @@ import { state, switchSession, showToast } from "../lib/store";
 export default function Sidebar() {
   return (
     <aside class="sb">
-      <div class="sb-top">
-        <div class="logo">C</div>
-        <div class="name">Cadence</div>
-        <div class="org">Mohanad</div>
-      </div>
-
       <div class="sb-search">
         <span class="ic">⌕</span>
         <input type="text" placeholder="Search…" />
@@ -62,7 +56,12 @@ export default function Sidebar() {
       </div>
 
       <div class="sb-bottom">
-        <div class="health"><span class="ok">●</span> brain healthy · 4ms · 38MB</div>
+        <button class="sb-cog" title="Settings" onClick={() => showToast("Opened settings")}>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M8 1.5v2M8 12.5v2M14.5 8h-2M3.5 8h-2M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4M12.6 12.6l-1.4-1.4M4.8 4.8L3.4 3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
     </aside>
   );
