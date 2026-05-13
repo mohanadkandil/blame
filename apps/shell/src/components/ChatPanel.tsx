@@ -1,5 +1,5 @@
 import { For, createSignal } from "solid-js";
-import { state, switchSession, showToast } from "../lib/store";
+import { state, switchSession, showToast, cycleThinking, THINKING_LABELS } from "../lib/store";
 import Messages from "./Messages";
 
 export default function ChatPanel() {
@@ -71,9 +71,13 @@ export default function ChatPanel() {
               <span class="ctx-badge">1M</span>
               <span class="arrow">▾</span>
             </button>
-            <button class="chip plan" title="Subscription tier">
-              <span class="meter"><span></span><span></span><span></span><span></span></span>
-              <b>Max</b>
+            <button
+              class={`chip brain level-${state.thinkingLevel}`}
+              onClick={() => cycleThinking()}
+              title="Thinking level — click to cycle"
+            >
+              <span class="brain-ic"><span class="brain-fill"></span></span>
+              <b>{THINKING_LABELS[state.thinkingLevel]}</b>
             </button>
             <div class="right">
               <button class="icon-btn" title="Attach file or screenshot">

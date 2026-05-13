@@ -77,6 +77,7 @@ const [state, setState] = createStore({
   ] as ChangedFile[],
   rightTab:  "changes"  as "all" | "changes" | "checks" | "review" | "history",
   bottomTab: "terminal" as "setup" | "run" | "terminal" | "logs",
+  thinkingLevel: 0 as 0 | 1 | 2 | 3,
 });
 
 export { state, setState };
@@ -176,3 +177,8 @@ export { toastMsg };
 export function switchSession(id: number) { setState("activeSessionId", id); }
 export function setRightTab(tab: typeof state.rightTab)   { setState("rightTab", tab); }
 export function setBottomTab(tab: typeof state.bottomTab) { setState("bottomTab", tab); }
+
+export const THINKING_LABELS = ["normal", "medium", "high", "max"] as const;
+export function cycleThinking() {
+  setState("thinkingLevel", ((state.thinkingLevel + 1) % 4) as 0 | 1 | 2 | 3);
+}
