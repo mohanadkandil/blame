@@ -7,6 +7,7 @@ export type SessionStatus = "running" | "idle" | "completed" | "failed";
 export type Session = {
   id: number;
   name: string;
+  projectId: string;
   status: SessionStatus;
   branch: string;
   runtime: string;
@@ -19,6 +20,7 @@ export type Project = {
   name: string;
   active: boolean;
   runningCount: number;
+  expanded: boolean;
   attention?: boolean;
 };
 
@@ -36,13 +38,19 @@ export type ToolDiffLine = { type: "add" | "rem" | "ctx"; num: string; text: str
 export type ToolCall = {
   id: string;
   icon: string;
-  name: string;
-  args: string;
+  name: string;        // e.g. "Run plan-technical"
+  provider?: string;   // e.g. "codex" / "claude"
+  args: string;        // detail, e.g. "plan-technical" / "12 files changed"
   status: ToolStatus;
   statusLabel: string;
   open: boolean;
   body?: ToolDiffLine[];
 };
+
+// Agent stream = ordered interleave of prose + tool calls (Paseo model).
+export type Block =
+  | { kind: "text"; text: string }
+  | { kind: "tool"; tool: ToolCall };
 
 export type Message = {
   id: number;
@@ -51,23 +59,25 @@ export type Message = {
   model?: string;
   stamp: string;
   text: string[];
-  tools?: ToolCall[];
+  blocks?: Block[];
 };
 
-// ===== Mock state =====
+// ===== Mock state — Paseo-style: projects own their agent sessions =====
 const [state, setState] = createStore({
   sessions: [
-    { id: 0, name: "agent comms layer",      status: "running" as SessionStatus,   branch: "cadence/agent-comms",      runtime: "1m 24s", tokens: 4128,  costUsd: 0.34 },
-    { id: 1, name: "refactor stream handler",status: "running" as SessionStatus,   branch: "cadence/refactor-stream",  runtime: "0m 42s", tokens: 2018,  costUsd: 0.14 },
-    { id: 2, name: "webhook idempotency",    status: "completed" as SessionStatus, branch: "cadence/webhook-fix",      runtime: "2m 07s", tokens: 7219,  costUsd: 1.04 },
-    { id: 3, name: "add input validation",   status: "idle" as SessionStatus,      branch: "cadence/input-validation", runtime: "1m 17s", tokens: 11623, costUsd: 0.91 },
+    { id: 0, name: "agent comms layer",      projectId: "foo",           status: "running" as SessionStatus,   branch: "cadence/agent-comms",      runtime: "1m 24s", tokens: 4128,  costUsd: 0.34 },
+    { id: 1, name: "refactor stream handler",projectId: "foo",           status: "running" as SessionStatus,   branch: "cadence/refactor-stream",  runtime: "0m 42s", tokens: 2018,  costUsd: 0.14 },
+    { id: 2, name: "webhook idempotency",    projectId: "foo",           status: "completed" as SessionStatus, branch: "cadence/webhook-fix",      runtime: "2m 07s", tokens: 7219,  costUsd: 1.04 },
+    { id: 3, name: "input validation",       projectId: "webapp",        status: "idle" as SessionStatus,      branch: "cadence/input-validation", runtime: "1m 17s", tokens: 11623, costUsd: 0.91 },
+    { id: 4, name: "oauth 2.1 migration",    projectId: "webapp",        status: "running" as SessionStatus,   branch: "cadence/oauth",            runtime: "0m 31s", tokens: 1820,  costUsd: 0.09 },
+    { id: 5, name: "rename design tokens",   projectId: "design-system", status: "completed" as SessionStatus, branch: "cadence/tokens",           runtime: "3m 02s", tokens: 5410,  costUsd: 0.62 },
   ] as Session[],
   activeSessionId: 0,
   projects: [
-    { id: "foo",           name: "foo",           active: true,  runningCount: 3 },
-    { id: "webapp",        name: "webapp",        active: false, runningCount: 0 },
-    { id: "infra",         name: "infra",         active: false, runningCount: 0 },
-    { id: "design-system", name: "design-system", active: false, runningCount: 1, attention: true },
+    { id: "foo",           name: "foo",           active: true,  runningCount: 2, expanded: true },
+    { id: "webapp",        name: "webapp",        active: false, runningCount: 1, expanded: true },
+    { id: "infra",         name: "infra",         active: false, runningCount: 0, expanded: false },
+    { id: "design-system", name: "design-system", active: false, runningCount: 0, expanded: false, attention: true },
   ] as Project[],
   changes: [
     { path: "lib/foo_web/sse.ex",         kind: "M", added: 62, removed: 18, active: true },
@@ -82,15 +92,15 @@ const [state, setState] = createStore({
 
 export { state, setState };
 
-// ===== Mock messages =====
+// ===== Mock messages — interleaved stream (Paseo orchestration model) =====
 export const mockMessages: Message[] = [
   {
     id: 1,
     role: "user",
     who: "You",
-    stamp: "10:42:18",
+    stamp: "15:40:02",
     text: [
-      "Refactor the streaming response handler in `lib/foo_web/sse.ex` to use Server-Sent Events instead of long polling. Keep the public API stable. Add tests for the new path.",
+      "Plan and build the analytics dashboard. Use Codex for implementation, Claude for design and review.",
     ],
   },
   {
@@ -98,65 +108,65 @@ export const mockMessages: Message[] = [
     role: "agent",
     who: "Opus 4.7",
     model: "claude-opus-4-7",
-    stamp: "10:42:23",
-    text: ["I'll read the existing handler, identify the long-polling sites, refactor to SSE, then add tests. The public function signature stays."],
-    tools: [
+    stamp: "15:40:06",
+    text: [],
+    blocks: [
+      { kind: "text", text: "I'll break this down into planning and implementation." },
       {
-        id: "t1",
-        icon: "R",
-        name: "read_file",
-        args: "path: lib/foo_web/sse.ex",
-        status: "ok",
-        statusLabel: "✓ 124 LOC",
-        open: true,
-        body: [
-          { type: "ctx", num: "1", text: "defmodule FooWeb.SSE do" },
-          { type: "ctx", num: "2", text: "  use FooWeb, :controller" },
-          { type: "ctx", num: "3", text: "" },
-          { type: "ctx", num: "4", text: "  def stream(conn, _params) do" },
-          { type: "ctx", num: "5", text: "    conn |> long_poll_loop()" },
-          { type: "ctx", num: "6", text: "  end" },
-          { type: "ctx", num: "…", text: "119 more lines" },
-        ],
+        kind: "tool",
+        tool: {
+          id: "t1", icon: "bot", name: "Run plan-technical",
+          provider: "codex", args: "plan-technical",
+          status: "ok", statusLabel: "", open: false,
+          body: [
+            { type: "ctx", num: "1", text: "# Technical plan" },
+            { type: "ctx", num: "2", text: "- SSE endpoint + reducer" },
+            { type: "ctx", num: "3", text: "- token meter component" },
+            { type: "ctx", num: "…", text: "42 more lines" },
+          ],
+        },
       },
       {
-        id: "t2",
-        icon: "S",
-        name: "grep",
-        args: "pattern: long_poll · in: lib/**/*.ex",
-        status: "ok",
-        statusLabel: "✓ 3 matches",
-        open: false,
+        kind: "tool",
+        tool: {
+          id: "t2", icon: "bot", name: "Run plan-design",
+          provider: "claude", args: "plan-design",
+          status: "ok", statusLabel: "", open: false,
+        },
       },
       {
-        id: "t3",
-        icon: "W",
-        name: "write_file",
-        args: "path: lib/foo_web/sse.ex · +62 −18",
-        status: "run",
-        statusLabel: "● writing",
-        open: true,
-        body: [
-          { type: "add", num: "+", text: "  def stream(conn, _params) do" },
-          { type: "add", num: "+", text: "    conn" },
-          { type: "add", num: "+", text: "    |> put_resp_header(\"content-type\", \"text/event-stream\")" },
-          { type: "add", num: "+", text: "    |> send_chunked(200)" },
-          { type: "add", num: "+", text: "    |> sse_loop()" },
-          { type: "add", num: "+", text: "  end" },
-          { type: "rem", num: "−", text: "  def stream(conn, _params) do" },
-          { type: "rem", num: "−", text: "    conn |> long_poll_loop()" },
-          { type: "rem", num: "−", text: "  end" },
-        ],
+        kind: "tool",
+        tool: {
+          id: "t3", icon: "bot", name: "Wait for agents",
+          provider: "", args: "plan-technical  plan-design",
+          status: "ok", statusLabel: "", open: false,
+        },
       },
+      { kind: "text", text: "Got the plans. Spinning up Codex for implementation." },
       {
-        id: "t4",
-        icon: "T",
-        name: "run_tests",
-        args: "filter: test/foo_web/sse_test.exs",
-        status: "run",
-        statusLabel: "● in progress",
-        open: false,
+        kind: "tool",
+        tool: {
+          id: "t4", icon: "bot", name: "Run implement",
+          provider: "codex", args: "12 files changed",
+          status: "ok", statusLabel: "", open: true,
+          body: [
+            { type: "add", num: "+", text: "lib/dash/live.ex" },
+            { type: "add", num: "+", text: "lib/dash_web/components/meter.ex" },
+            { type: "add", num: "+", text: "test/dash/live_test.exs" },
+            { type: "ctx", num: "…", text: "9 more files" },
+          ],
+        },
       },
+      { kind: "text", text: "Implementation done. Requesting review from Claude." },
+      {
+        kind: "tool",
+        tool: {
+          id: "t5", icon: "bot", name: "Run review",
+          provider: "claude", args: "no issues found",
+          status: "run", statusLabel: "", open: false,
+        },
+      },
+      { kind: "text", text: "All tasks complete. Dashboard is ready." },
     ],
   },
 ];
@@ -175,6 +185,12 @@ export { toastMsg };
 
 // ===== Actions =====
 export function switchSession(id: number) { setState("activeSessionId", id); }
+export function toggleProject(id: string) {
+  setState("projects", (p) => p.id === id, "expanded", (e) => !e);
+}
+export function sessionsForProject(projectId: string): Session[] {
+  return state.sessions.filter((s) => s.projectId === projectId);
+}
 export function setRightTab(tab: typeof state.rightTab)   { setState("rightTab", tab); }
 export function setBottomTab(tab: typeof state.bottomTab) { setState("bottomTab", tab); }
 
