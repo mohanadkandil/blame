@@ -6,6 +6,11 @@ export default function ChatPanel() {
   const [text, setText] = createSignal("");
 
   const activeSession = () => state.sessions.find((s) => s.id === state.activeSessionId);
+  // Deck tabs = agents in the active session's project (Paseo workspace deck model)
+  const deckTabs = () => {
+    const pid = activeSession()?.projectId;
+    return pid ? state.sessions.filter((s) => s.projectId === pid) : state.sessions;
+  };
 
   function onKey(e: KeyboardEvent) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -21,7 +26,7 @@ export default function ChatPanel() {
     <main class="chat">
       {/* Tabs */}
       <div class="chat-tabs">
-        <For each={state.sessions}>
+        <For each={deckTabs()}>
           {(s) => (
             <button
               class={`chat-tab${s.id === state.activeSessionId ? " active" : ""}`}

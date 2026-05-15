@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import { mockMessages } from "../lib/store";
-import ToolCluster from "./ToolCluster";
+import { ToolBadge } from "./ToolCluster";
 
 export default function Messages() {
   return (
@@ -16,13 +16,23 @@ export default function Messages() {
               </div>
             </Show>
             <Show when={m.role === "agent"}>
-              <Show when={m.tools && m.tools.length > 0}>
-                <ToolCluster tools={m.tools!} messageCount={m.text.length} />
-              </Show>
-              <div class="agent-prose">
+              <div class="agent-stream">
+                {/* Legacy plain-text agent messages */}
                 <For each={m.text}>
-                  {(p) => <p innerHTML={formatInline(p)}></p>}
+                  {(p) => <p class="stream-text" innerHTML={formatInline(p)}></p>}
                 </For>
+                {/* Interleaved blocks: prose + tool rows in order */}
+                <Show when={m.blocks}>
+                  <For each={m.blocks}>
+                    {(b) =>
+                      b.kind === "text" ? (
+                        <p class="stream-text" innerHTML={formatInline(b.text)}></p>
+                      ) : (
+                        <ToolBadge tool={b.tool} />
+                      )
+                    }
+                  </For>
+                </Show>
               </div>
             </Show>
           </div>
