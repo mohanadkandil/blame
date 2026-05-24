@@ -194,6 +194,107 @@ export function sessionsForProject(projectId: string): Session[] {
 export function setRightTab(tab: typeof state.rightTab)   { setState("rightTab", tab); }
 export function setBottomTab(tab: typeof state.bottomTab) { setState("bottomTab", tab); }
 
+// ===== Live conversation — array of turns that grows across sends =====
+import { createStore as createSolidStore } from "solid-js/store";
+import { onAgentEvent, spawnAgent } from "./socket";
+
+export type Turn = {
+  id: number;
+  userText: string;
+  agentBlocks: Block[];
+  done: boolean;
+};
+
+const [conversationState, setConversation] = createSolidStore<{ turns: Turn[] }>({ turns: [] });
+export const conversation = () => conversationState.turns;
+export const [streaming, setStreaming] = createSignal(false);
+
+function activeTurnIndex(): number {
+  // Mutate the most recent turn (the in-flight one).
+  return conversationState.turns.length - 1;
+}
+
+// Map daemon events -> blocks on the active turn.
+onAgentEvent((ev) => {
+  const i = activeTurnIndex();
+  if (i < 0) return;
+
+  if (ev.type === "text") {
+    setConversation("turns", i, "agentBlocks", (bs): Block[] => {
+      const last = bs[bs.length - 1];
+      if (last && last.kind === "text") {
+        return [...bs.slice(0, -1), { kind: "text" as const, text: last.text + ev.text }];
+      }
+      return [...bs, { kind: "text" as const, text: ev.text }];
+    });
+  } else if (ev.type === "tool_use") {
+    const tool: ToolCall = {
+      id: ev.tool_id,
+      icon: "bot",
+      name: ev.name,
+      args:
+        typeof ev.input === "object" && ev.input !== null
+          ? summariseInput(ev.input as Record<string, unknown>)
+          : "",
+      status: "run",
+      statusLabel: "",
+      open: false,
+    };
+    setConversation("turns", i, "agentBlocks", (bs): Block[] => [...bs, { kind: "tool" as const, tool }]);
+  } else if (ev.type === "tool_result") {
+    setConversation("turns", i, "agentBlocks", (bs): Block[] =>
+      bs.map((b): Block =>
+        b.kind === "tool" && b.tool.id === ev.tool_id
+          ? {
+              kind: "tool" as const,
+              tool: {
+                ...b.tool,
+                status: "ok" as const,
+                body: [{ type: "ctx" as const, num: "", text: ev.output.slice(0, 4000) }],
+              },
+            }
+          : b,
+      ),
+    );
+  } else if (ev.type === "done") {
+    setConversation("turns", i, "done", true);
+    setStreaming(false);
+  }
+});
+
+function summariseInput(input: Record<string, unknown>): string {
+  const v = input.file_path || input.path || input.pattern || input.command || input.url;
+  if (typeof v === "string") return v.length > 80 ? v.slice(0, 77) + "…" : v;
+  const keys = Object.keys(input);
+  return keys.length ? keys.join(", ") : "";
+}
+
+export async function sendPrompt(prompt: string) {
+  const text = prompt.trim();
+  if (!text || streaming()) return;
+
+  // Append a new turn — user msg + empty agent reply.
+  const id = Date.now();
+  setConversation("turns", (ts) => [
+    ...ts,
+    { id, userText: text, agentBlocks: [], done: false },
+  ]);
+  setStreaming(true);
+
+  try {
+    await spawnAgent(text);
+  } catch (e) {
+    setStreaming(false);
+    setConversation("turns", activeTurnIndex(), "done", true);
+    showToast("Spawn failed: " + (e as Error).message);
+  }
+}
+
+export function clearConversation() {
+  setConversation("turns", []);
+}
+
+// ===== Thinking-level (UI control) =====
 export const THINKING_LABELS = ["normal", "medium", "high", "max"] as const;
 export function cycleThinking() {
   setState("thinkingLevel", ((state.thinkingLevel + 1) % 4) as 0 | 1 | 2 | 3);

@@ -1,5 +1,5 @@
 import { For, createSignal } from "solid-js";
-import { state, switchSession, showToast, cycleThinking, THINKING_LABELS } from "../lib/store";
+import { state, switchSession, showToast, cycleThinking, THINKING_LABELS, sendPrompt } from "../lib/store";
 import Messages from "./Messages";
 
 export default function ChatPanel() {
@@ -12,13 +12,17 @@ export default function ChatPanel() {
     return pid ? state.sessions.filter((s) => s.projectId === pid) : state.sessions;
   };
 
+  async function send() {
+    const t = text().trim();
+    if (!t) return;
+    setText("");
+    await sendPrompt(t);
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      const t = text().trim();
-      if (!t) return;
-      showToast(`Spawned: ${t.slice(0, 40)}…`);
-      setText("");
+      send();
     }
   }
 
@@ -92,12 +96,7 @@ export default function ChatPanel() {
               </button>
               <button
                 class="send"
-                onClick={() => {
-                  const t = text().trim();
-                  if (!t) return;
-                  showToast(`Spawned: ${t.slice(0, 40)}…`);
-                  setText("");
-                }}
+                onClick={send}
                 disabled={!text().trim()}
                 title="Send (⌘↵)"
               >

@@ -454,6 +454,8 @@ button { font-family: inherit; }
   flex-direction: column;
   gap: 2px;
 }
+.msg.agent .stream-text.typing { opacity: 0.5; animation: typingPulse 1.2s ease-in-out infinite; }
+@keyframes typingPulse { 0%,100%{opacity:0.35} 50%{opacity:0.85} }
 .msg.agent .stream-text {
   font-size: 16px;              /* fontSize.base */
   color: var(--fg);
