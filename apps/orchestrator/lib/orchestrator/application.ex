@@ -14,8 +14,7 @@ defmodule Orchestrator.Application do
        repos: Application.fetch_env!(:orchestrator, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:orchestrator, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Orchestrator.PubSub},
-      # Start a worker by calling: Orchestrator.Worker.start_link(arg)
-      # {Orchestrator.Worker, arg},
+      Orchestrator.Run.Supervisor,
       # Start to serve requests, typically the last entry
       OrchestratorWeb.Endpoint
     ]
