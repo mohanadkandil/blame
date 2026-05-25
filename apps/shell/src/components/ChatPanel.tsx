@@ -1,16 +1,10 @@
-import { For, createSignal } from "solid-js";
-import { state, switchSession, showToast, cycleThinking, THINKING_LABELS, sendPrompt } from "../lib/store";
+import { For, Show, createSignal } from "solid-js";
+import { state, switchSession, cycleThinking, THINKING_LABELS, sendPrompt, conversation } from "../lib/store";
 import Messages from "./Messages";
 
 export default function ChatPanel() {
   const [text, setText] = createSignal("");
-
   const activeSession = () => state.sessions.find((s) => s.id === state.activeSessionId);
-  // Deck tabs = agents in the active session's project (Paseo workspace deck model)
-  const deckTabs = () => {
-    const pid = activeSession()?.projectId;
-    return pid ? state.sessions.filter((s) => s.projectId === pid) : state.sessions;
-  };
 
   async function send() {
     const t = text().trim();
@@ -28,35 +22,48 @@ export default function ChatPanel() {
 
   return (
     <main class="chat">
-      {/* Tabs */}
-      <div class="chat-tabs">
-        <For each={deckTabs()}>
-          {(s) => (
-            <button
-              class={`chat-tab${s.id === state.activeSessionId ? " active" : ""}`}
-              onClick={() => switchSession(s.id)}
-            >
-              <span class={`dot${s.status === "running" ? " running" : ""}`}></span>
-              <span>{s.name}</span>
-              <span class="x">×</span>
-            </button>
-          )}
-        </For>
-        <button class="chat-tab new" onClick={() => showToast("New session (wired in v0.1)")}>+</button>
-      </div>
-
-      {/* Toolbar */}
-      <div class="chat-toolbar">
-        <div class="branch">
-          <span class="ico">⎇</span>
-          <span><b>{activeSession()?.branch}</b> · off main</span>
+      {/* Tabs — only shown when there are real sessions */}
+      <Show when={state.sessions.length > 0}>
+        <div class="chat-tabs">
+          <For each={state.sessions}>
+            {(s) => (
+              <button
+                class={`chat-tab${s.id === state.activeSessionId ? " active" : ""}`}
+                onClick={() => switchSession(s.id)}
+              >
+                <span class={`dot${s.status === "running" ? " running" : ""}`}></span>
+                <span>{s.name}</span>
+                <span class="x">×</span>
+              </button>
+            )}
+          </For>
         </div>
-        <div class="meta">
-          runtime <b>{activeSession()?.runtime}</b> · tokens <b>{activeSession()?.tokens.toLocaleString()}</b> · <b>${activeSession()?.costUsd.toFixed(2)}</b>
-        </div>
-      </div>
+      </Show>
 
-      {/* Messages */}
+      {/* Toolbar — only when there is an active session */}
+      <Show when={activeSession()}>
+        {(s) => (
+          <div class="chat-toolbar">
+            <div class="branch">
+              <span class="ico">⎇</span>
+              <span><b>{s().branch}</b> · off main</span>
+            </div>
+            <div class="meta">
+              runtime <b>{s().runtime}</b> · tokens <b>{s().tokens.toLocaleString()}</b> · <b>${s().costUsd.toFixed(2)}</b>
+            </div>
+          </div>
+        )}
+      </Show>
+
+      {/* Live conversation summary bar */}
+      <Show when={!activeSession() && conversation().length > 0}>
+        <div class="chat-toolbar">
+          <div class="meta">
+            <b>{conversation().length}</b> turn{conversation().length === 1 ? "" : "s"}
+          </div>
+        </div>
+      </Show>
+
       <Messages />
 
       {/* Composer */}

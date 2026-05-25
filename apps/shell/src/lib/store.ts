@@ -62,29 +62,12 @@ export type Message = {
   blocks?: Block[];
 };
 
-// ===== Mock state — Paseo-style: projects own their agent sessions =====
+// ===== App state — empty by default. Real data fills as user works. =====
 const [state, setState] = createStore({
-  sessions: [
-    { id: 0, name: "agent comms layer",      projectId: "foo",           status: "running" as SessionStatus,   branch: "cadence/agent-comms",      runtime: "1m 24s", tokens: 4128,  costUsd: 0.34 },
-    { id: 1, name: "refactor stream handler",projectId: "foo",           status: "running" as SessionStatus,   branch: "cadence/refactor-stream",  runtime: "0m 42s", tokens: 2018,  costUsd: 0.14 },
-    { id: 2, name: "webhook idempotency",    projectId: "foo",           status: "completed" as SessionStatus, branch: "cadence/webhook-fix",      runtime: "2m 07s", tokens: 7219,  costUsd: 1.04 },
-    { id: 3, name: "input validation",       projectId: "webapp",        status: "idle" as SessionStatus,      branch: "cadence/input-validation", runtime: "1m 17s", tokens: 11623, costUsd: 0.91 },
-    { id: 4, name: "oauth 2.1 migration",    projectId: "webapp",        status: "running" as SessionStatus,   branch: "cadence/oauth",            runtime: "0m 31s", tokens: 1820,  costUsd: 0.09 },
-    { id: 5, name: "rename design tokens",   projectId: "design-system", status: "completed" as SessionStatus, branch: "cadence/tokens",           runtime: "3m 02s", tokens: 5410,  costUsd: 0.62 },
-  ] as Session[],
-  activeSessionId: 0,
-  projects: [
-    { id: "foo",           name: "foo",           active: true,  runningCount: 2, expanded: true },
-    { id: "webapp",        name: "webapp",        active: false, runningCount: 1, expanded: true },
-    { id: "infra",         name: "infra",         active: false, runningCount: 0, expanded: false },
-    { id: "design-system", name: "design-system", active: false, runningCount: 0, expanded: false, attention: true },
-  ] as Project[],
-  changes: [
-    { path: "lib/foo_web/sse.ex",         kind: "M", added: 62, removed: 18, active: true },
-    { path: "test/foo_web/sse_test.exs",  kind: "A", added: 34 },
-    { path: "lib/foo_web/router.ex",      kind: "M", added: 2,  removed: 1 },
-    { path: "docs/architecture.md",       kind: "M", added: 6 },
-  ] as ChangedFile[],
+  sessions: [] as Session[],
+  activeSessionId: null as number | null,
+  projects: [] as Project[],
+  changes: [] as ChangedFile[],
   rightTab:  "changes"  as "all" | "changes" | "checks" | "review" | "history",
   bottomTab: "terminal" as "setup" | "run" | "terminal" | "logs",
   thinkingLevel: 0 as 0 | 1 | 2 | 3,
@@ -92,84 +75,6 @@ const [state, setState] = createStore({
 
 export { state, setState };
 
-// ===== Mock messages — interleaved stream (Paseo orchestration model) =====
-export const mockMessages: Message[] = [
-  {
-    id: 1,
-    role: "user",
-    who: "You",
-    stamp: "15:40:02",
-    text: [
-      "Plan and build the analytics dashboard. Use Codex for implementation, Claude for design and review.",
-    ],
-  },
-  {
-    id: 2,
-    role: "agent",
-    who: "Opus 4.7",
-    model: "claude-opus-4-7",
-    stamp: "15:40:06",
-    text: [],
-    blocks: [
-      { kind: "text", text: "I'll break this down into planning and implementation." },
-      {
-        kind: "tool",
-        tool: {
-          id: "t1", icon: "bot", name: "Run plan-technical",
-          provider: "codex", args: "plan-technical",
-          status: "ok", statusLabel: "", open: false,
-          body: [
-            { type: "ctx", num: "1", text: "# Technical plan" },
-            { type: "ctx", num: "2", text: "- SSE endpoint + reducer" },
-            { type: "ctx", num: "3", text: "- token meter component" },
-            { type: "ctx", num: "…", text: "42 more lines" },
-          ],
-        },
-      },
-      {
-        kind: "tool",
-        tool: {
-          id: "t2", icon: "bot", name: "Run plan-design",
-          provider: "claude", args: "plan-design",
-          status: "ok", statusLabel: "", open: false,
-        },
-      },
-      {
-        kind: "tool",
-        tool: {
-          id: "t3", icon: "bot", name: "Wait for agents",
-          provider: "", args: "plan-technical  plan-design",
-          status: "ok", statusLabel: "", open: false,
-        },
-      },
-      { kind: "text", text: "Got the plans. Spinning up Codex for implementation." },
-      {
-        kind: "tool",
-        tool: {
-          id: "t4", icon: "bot", name: "Run implement",
-          provider: "codex", args: "12 files changed",
-          status: "ok", statusLabel: "", open: true,
-          body: [
-            { type: "add", num: "+", text: "lib/dash/live.ex" },
-            { type: "add", num: "+", text: "lib/dash_web/components/meter.ex" },
-            { type: "add", num: "+", text: "test/dash/live_test.exs" },
-            { type: "ctx", num: "…", text: "9 more files" },
-          ],
-        },
-      },
-      { kind: "text", text: "Implementation done. Requesting review from Claude." },
-      {
-        kind: "tool",
-        tool: {
-          id: "t5", icon: "bot", name: "Run review",
-          provider: "claude", args: "no issues found",
-          status: "run", statusLabel: "", open: false,
-        },
-      },
-      { kind: "text", text: "All tasks complete. Dashboard is ready." },
-    ],
-  },
-];
 
 // ===== Toast =====
 const [toastMsg, setToastMsg] = createSignal<string | null>(null);

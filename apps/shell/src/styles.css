@@ -454,6 +454,19 @@ button { font-family: inherit; }
   flex-direction: column;
   gap: 2px;
 }
+/* empty states */
+.convo-empty,
+.sb-empty,
+.panel-empty {
+  font-size: 13px;
+  color: var(--fg-muted);
+  padding: 24px 18px;
+  text-align: center;
+  opacity: 0.6;
+}
+.convo-empty { padding: 80px 24px; font-size: 15px; }
+.sb-empty { padding: 16px 12px; text-align: left; }
+
 .msg.agent .stream-text.typing { opacity: 0.5; animation: typingPulse 1.2s ease-in-out infinite; }
 @keyframes typingPulse { 0%,100%{opacity:0.35} 50%{opacity:0.85} }
 .msg.agent .stream-text {

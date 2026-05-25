@@ -1,45 +1,20 @@
 import { For, Show } from "solid-js";
-import { mockMessages, conversation, streaming } from "../lib/store";
+import { conversation, streaming } from "../lib/store";
 import { ToolBadge } from "./ToolCluster";
 
 export default function Messages() {
-  const hasLive = () => conversation().length > 0;
+  const empty = () => conversation().length === 0;
 
   return (
     <div class="messages">
       <Show
-        when={hasLive()}
+        when={!empty()}
         fallback={
-          <For each={mockMessages}>
-            {(m) => (
-              <div class={`msg ${m.role}`}>
-                <Show when={m.role === "user"}>
-                  <div class="user-bubble">
-                    <For each={m.text}>{(p) => <p innerHTML={formatInline(p)}></p>}</For>
-                  </div>
-                </Show>
-                <Show when={m.role === "agent"}>
-                  <div class="agent-stream">
-                    <For each={m.text}>{(p) => <p class="stream-text" innerHTML={formatInline(p)}></p>}</For>
-                    <Show when={m.blocks}>
-                      <For each={m.blocks}>
-                        {(b) =>
-                          b.kind === "text" ? (
-                            <p class="stream-text" innerHTML={formatInline(b.text)}></p>
-                          ) : (
-                            <ToolBadge tool={b.tool} />
-                          )
-                        }
-                      </For>
-                    </Show>
-                  </div>
-                </Show>
-              </div>
-            )}
-          </For>
+          <div class="convo-empty">
+            <p>Type a prompt to start.</p>
+          </div>
         }
       >
-        {/* Live conversation — array of turns */}
         <For each={conversation()}>
           {(turn, i) => (
             <>

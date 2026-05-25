@@ -14,54 +14,59 @@ export default function Sidebar() {
         <span class="sb-head-kbd">⌘N</span>
       </button>
 
-      {/* Project tree — unified collapsible projects → agent sessions */}
+      {/* Project tree — empty until projects exist */}
       <div class="sb-tree">
-        <For each={state.projects}>
-          {(p) => {
-            const sessions = () => sessionsForProject(p.id);
-            return (
-              <div class="proj">
-                <button
-                  class={`proj-row${p.active ? " active" : ""}`}
-                  onClick={() => toggleProject(p.id)}
-                >
-                  <svg
-                    class={`proj-chevron${p.expanded ? " open" : ""}`}
-                    width="12" height="12" viewBox="0 0 12 12" fill="none"
+        <Show
+          when={state.projects.length > 0}
+          fallback={<div class="sb-empty">No projects yet</div>}
+        >
+          <For each={state.projects}>
+            {(p) => {
+              const sessions = () => sessionsForProject(p.id);
+              return (
+                <div class="proj">
+                  <button
+                    class={`proj-row${p.active ? " active" : ""}`}
+                    onClick={() => toggleProject(p.id)}
                   >
-                    <path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                  <span class="proj-name">{p.name}</span>
-                  <Show when={p.runningCount > 0}>
-                    <span class="proj-count">{p.runningCount}</span>
-                  </Show>
-                  <Show when={p.attention && p.runningCount === 0}>
-                    <span class="proj-dot attention"></span>
-                  </Show>
-                </button>
-
-                <Show when={p.expanded}>
-                  <div class="proj-children">
-                    <For each={sessions()}>
-                      {(s) => (
-                        <button
-                          class={`agent-row${s.id === state.activeSessionId ? " active" : ""}`}
-                          onClick={() => switchSession(s.id)}
-                        >
-                          <span class={`agent-dot ${s.status}`}></span>
-                          <span class="agent-name">{s.name}</span>
-                        </button>
-                      )}
-                    </For>
-                    <Show when={sessions().length === 0}>
-                      <div class="proj-empty">No agents</div>
+                    <svg
+                      class={`proj-chevron${p.expanded ? " open" : ""}`}
+                      width="12" height="12" viewBox="0 0 12 12" fill="none"
+                    >
+                      <path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="proj-name">{p.name}</span>
+                    <Show when={p.runningCount > 0}>
+                      <span class="proj-count">{p.runningCount}</span>
                     </Show>
-                  </div>
-                </Show>
-              </div>
-            );
-          }}
-        </For>
+                    <Show when={p.attention && p.runningCount === 0}>
+                      <span class="proj-dot attention"></span>
+                    </Show>
+                  </button>
+
+                  <Show when={p.expanded}>
+                    <div class="proj-children">
+                      <For each={sessions()}>
+                        {(s) => (
+                          <button
+                            class={`agent-row${s.id === state.activeSessionId ? " active" : ""}`}
+                            onClick={() => switchSession(s.id)}
+                          >
+                            <span class={`agent-dot ${s.status}`}></span>
+                            <span class="agent-name">{s.name}</span>
+                          </button>
+                        )}
+                      </For>
+                      <Show when={sessions().length === 0}>
+                        <div class="proj-empty">No agents</div>
+                      </Show>
+                    </div>
+                  </Show>
+                </div>
+              );
+            }}
+          </For>
+        </Show>
       </div>
 
       {/* Footer — host pill (left) + icon row (right), top border */}
