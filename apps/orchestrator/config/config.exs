@@ -9,7 +9,12 @@ import Config
 
 config :orchestrator,
   ecto_repos: [Orchestrator.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  # Root of the git repo agents operate on. Worktrees branch off of this.
+  # Override per-env in dev.exs / runtime.exs / via PROJECT_ROOT env var.
+  project_root: File.cwd!(),
+  # Where per-agent worktrees are checked out. Flat-per-project layout.
+  worktrees_dir: Path.expand("~/.cadence/worktrees")
 
 # Configure the endpoint
 config :orchestrator, OrchestratorWeb.Endpoint,

@@ -20,6 +20,14 @@ if System.get_env("PHX_SERVER") do
   config :orchestrator, OrchestratorWeb.Endpoint, server: true
 end
 
+if root = System.get_env("PROJECT_ROOT") do
+  config :orchestrator, project_root: root
+end
+
+if wd = System.get_env("WORKTREES_DIR") do
+  config :orchestrator, worktrees_dir: wd
+end
+
 config :orchestrator, OrchestratorWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
