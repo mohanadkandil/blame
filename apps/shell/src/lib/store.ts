@@ -108,6 +108,9 @@ export type Turn = {
   userText: string;
   agentBlocks: Block[];
   done: boolean;
+  runId?: number;
+  branch?: string;
+  worktreePath?: string;
 };
 
 const [conversationState, setConversation] = createSolidStore<{ turns: Turn[] }>({ turns: [] });
@@ -187,7 +190,11 @@ export async function sendPrompt(prompt: string) {
   setStreaming(true);
 
   try {
-    await spawnAgent(text);
+    const reply = await spawnAgent(text);
+    const i = activeTurnIndex();
+    setConversation("turns", i, "runId", reply.run_id);
+    if (reply.branch) setConversation("turns", i, "branch", reply.branch);
+    if (reply.path) setConversation("turns", i, "worktreePath", reply.path);
   } catch (e) {
     setStreaming(false);
     setConversation("turns", activeTurnIndex(), "done", true);

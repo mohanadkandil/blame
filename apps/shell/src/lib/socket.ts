@@ -23,11 +23,22 @@ channel.on("agent_event", (ev: AgentEvent) => {
   for (const cb of eventListeners) cb(ev);
 });
 
-export function spawnAgent(prompt: string): Promise<{ run_id: number }> {
+export type SpawnReply = {
+  run_id: number;
+  isolated: boolean;
+  branch?: string;
+  path?: string;
+};
+
+export function spawnAgent(
+  prompt: string,
+  opts: { isolate?: boolean } = {},
+): Promise<SpawnReply> {
+  const isolate = opts.isolate ?? true;
   return new Promise((resolve, reject) => {
     channel
-      .push("spawn", { prompt })
-      .receive("ok", (resp: { run_id: number }) => resolve(resp))
+      .push("spawn", { prompt, isolate })
+      .receive("ok", (resp: SpawnReply) => resolve(resp))
       .receive("error", reject)
       .receive("timeout", () => reject(new Error("spawn timeout")));
   });
